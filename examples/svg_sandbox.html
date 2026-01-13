@@ -12,16 +12,27 @@
 		</style>
 	</head>
 	<body>
+		<script type="importmap">
+			{
+				"imports": {
+					"three": "../build/three.module.js",
+					"three/addons/": "./jsm/"
+				}
+			}
+		</script>
 
 		<script type="module">
 
-			import * as THREE from '../build/three.module.js';
+			import * as THREE from 'three';
 
-			import Stats from './jsm/libs/stats.module.js';
+			import Stats from 'three/addons/libs/stats.module.js';
+			import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-			import { SVGRenderer, SVGObject } from './jsm/renderers/SVGRenderer.js';
+			import { SVGRenderer, SVGObject } from 'three/addons/renderers/SVGRenderer.js';
 
-			let camera, scene, renderer, stats;
+			THREE.ColorManagement.enabled = false;
+
+			let camera, scene, renderer, stats, controls;
 
 			let group;
 
@@ -208,6 +219,9 @@
 				renderer.setQuality( 'low' );
 				document.body.appendChild( renderer.domElement );
 
+				controls = new OrbitControls( camera, renderer.domElement );
+				controls.enableDamping = true;
+
 				stats = new Stats();
 				document.body.appendChild( stats.dom );
 
@@ -239,13 +253,9 @@
 
 			function render() {
 
-				const time = Date.now() * 0.0002;
-
-				camera.position.x = Math.sin( time ) * 500;
-				camera.position.z = Math.cos( time ) * 500;
-				camera.lookAt( scene.position );
-
 				group.rotation.x += 0.01;
+
+				controls.update();
 
 				renderer.render( scene, camera );
 

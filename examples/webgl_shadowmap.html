@@ -11,24 +11,34 @@
 
 		<div id="info">
 		<a href="https://threejs.org" target="_blank" rel="noopener">three.js</a> - shadowmap - models by <a href="https://mirada.com/" target="_blank" rel="noopener">mirada</a> from <a href="http://www.ro.me" target="_blank" rel="noopener">rome</a><br />
-		move camera with WASD / RF + mouse<br />
 		t: toggle HUD
 		</div>
 
+		<script type="importmap">
+			{
+				"imports": {
+					"three": "../build/three.module.js",
+					"three/addons/": "./jsm/"
+				}
+			}
+		</script>
+
 		<script type="module">
 
-			import * as THREE from '../build/three.module.js';
+			import * as THREE from 'three';
 
-			import Stats from './jsm/libs/stats.module.js';
+			import Stats from 'three/addons/libs/stats.module.js';
 
-			import { FirstPersonControls } from './jsm/controls/FirstPersonControls.js';
-			import { GLTFLoader } from './jsm/loaders/GLTFLoader.js';
-			import { ShadowMapViewer } from './jsm/utils/ShadowMapViewer.js';
+			import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+			import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+			import { FontLoader } from 'three/addons/loaders/FontLoader.js';
+			import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
+			import { ShadowMapViewer } from 'three/addons/utils/ShadowMapViewer.js';
 
 			const SHADOW_MAP_WIDTH = 2048, SHADOW_MAP_HEIGHT = 1024;
 
-			let SCREEN_WIDTH = window.innerWidth;
-			let SCREEN_HEIGHT = window.innerHeight;
+			const SCREEN_WIDTH = window.innerWidth;
+			const SCREEN_HEIGHT = window.innerHeight;
 			const FLOOR = - 250;
 
 			let camera, controls, scene, renderer;
@@ -48,8 +58,6 @@
 			let showHUD = false;
 
 			init();
-			animate();
-
 
 			function init() {
 
@@ -69,14 +77,16 @@
 
 				// LIGHTS
 
-				const ambient = new THREE.AmbientLight( 0x444444 );
+				const ambient = new THREE.AmbientLight( 0xffffff );
 				scene.add( ambient );
 
-				light = new THREE.SpotLight( 0xffffff, 1, 0, Math.PI / 5, 0.3 );
+				light = new THREE.DirectionalLight( 0xffffff, 3 );
 				light.position.set( 0, 1500, 1000 );
-				light.target.position.set( 0, 0, 0 );
-
 				light.castShadow = true;
+				light.shadow.camera.top = 2000;
+				light.shadow.camera.bottom = - 2000;
+				light.shadow.camera.left = - 2000;
+				light.shadow.camera.right = 2000;
 				light.shadow.camera.near = 1200;
 				light.shadow.camera.far = 2500;
 				light.shadow.bias = 0.0001;
@@ -91,12 +101,12 @@
 
 				// RENDERER
 
-				renderer = new THREE.WebGLRenderer( { antialias: true } );
+				renderer = new THREE.WebGLRenderer( { antialias: true, reversedDepthBuffer: true } );
 				renderer.setPixelRatio( window.devicePixelRatio );
 				renderer.setSize( SCREEN_WIDTH, SCREEN_HEIGHT );
+				renderer.setAnimationLoop( animate );
 				container.appendChild( renderer.domElement );
 
-				renderer.outputEncoding = THREE.sRGBEncoding;
 				renderer.autoClear = false;
 
 				//
@@ -106,14 +116,14 @@
 
 				// CONTROLS
 
-				controls = new FirstPersonControls( camera, renderer.domElement );
+				controls = new OrbitControls( camera, renderer.domElement );
+				controls.enablePan = false;
+				controls.maxPolarAngle = Math.PI / 2;
+				controls.minDistance = 200;
+				controls.maxDistance = 2200;
 
-				controls.lookSpeed = 0.0125;
-				controls.movementSpeed = 500;
-				controls.noFly = false;
-				controls.lookVertical = true;
-
-				controls.lookAt( scene.position );
+				controls.target.set( 0, - 75, 25 );
+				controls.update();
 
 				// STATS
 
@@ -129,15 +139,10 @@
 
 			function onWindowResize() {
 
-				SCREEN_WIDTH = window.innerWidth;
-				SCREEN_HEIGHT = window.innerHeight;
-
-				camera.aspect = SCREEN_WIDTH / SCREEN_HEIGHT;
+				camera.aspect = window.innerWidth / window.innerHeight;
 				camera.updateProjectionMatrix();
 
-				renderer.setSize( SCREEN_WIDTH, SCREEN_HEIGHT );
-
-				controls.handleResize();
+				renderer.setSize( window.innerWidth, window.innerHeight );
 
 			}
 
@@ -169,7 +174,7 @@
 				// GROUND
 
 				const geometry = new THREE.PlaneGeometry( 100, 100 );
-				const planeMaterial = new THREE.MeshPhongMaterial( { color: 0xffb851 } );
+				const planeMaterial = new THREE.MeshPhongMaterial( { color: 0xffdd99 } );
 
 				const ground = new THREE.Mesh( geometry, planeMaterial );
 
@@ -184,15 +189,15 @@
 
 				// TEXT
 
-				const loader = new THREE.FontLoader();
+				const loader = new FontLoader();
 				loader.load( 'fonts/helvetiker_bold.typeface.json', function ( font ) {
 
-					const textGeo = new THREE.TextGeometry( "THREE.JS", {
+					const textGeo = new TextGeometry( 'THREE.JS', {
 
 						font: font,
 
 						size: 200,
-						height: 50,
+						depth: 50,
 						curveSegments: 12,
 
 						bevelThickness: 2,
@@ -276,7 +281,7 @@
 
 				const gltfloader = new GLTFLoader();
 
-				gltfloader.load( "models/gltf/Horse.glb", function ( gltf ) {
+				gltfloader.load( 'models/gltf/Horse.glb', function ( gltf ) {
 
 					const mesh = gltf.scene.children[ 0 ];
 
@@ -292,7 +297,7 @@
 
 				} );
 
-				gltfloader.load( "models/gltf/Flamingo.glb", function ( gltf ) {
+				gltfloader.load( 'models/gltf/Flamingo.glb', function ( gltf ) {
 
 					const mesh = gltf.scene.children[ 0 ];
 					const clip = gltf.animations[ 0 ];
@@ -301,7 +306,7 @@
 
 				} );
 
-				gltfloader.load( "models/gltf/Stork.glb", function ( gltf ) {
+				gltfloader.load( 'models/gltf/Stork.glb', function ( gltf ) {
 
 					const mesh = gltf.scene.children[ 0 ];
 					const clip = gltf.animations[ 0 ];
@@ -310,7 +315,7 @@
 
 				} );
 
-				gltfloader.load( "models/gltf/Parrot.glb", function ( gltf ) {
+				gltfloader.load( 'models/gltf/Parrot.glb', function ( gltf ) {
 
 					const mesh = gltf.scene.children[ 0 ];
 					const clip = gltf.animations[ 0 ];
@@ -322,8 +327,6 @@
 			}
 
 			function animate() {
-
-				requestAnimationFrame( animate );
 
 				render();
 				stats.update();

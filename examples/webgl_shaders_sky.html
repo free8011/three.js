@@ -11,20 +11,28 @@
 		<div id="info"><a href="https://threejs.org" target="_blank" rel="noopener">three.js</a> webgl - sky + sun shader
 		</div>
 
+		<script type="importmap">
+			{
+				"imports": {
+					"three": "../build/three.module.js",
+					"three/addons/": "./jsm/"
+				}
+			}
+		</script>
+
 		<script type="module">
 
-			import * as THREE from '../build/three.module.js';
+			import * as THREE from 'three';
 
-			import { GUI } from './jsm/libs/dat.gui.module.js';
-			import { OrbitControls } from './jsm/controls/OrbitControls.js';
-			import { Sky } from './jsm/objects/Sky.js';
+			import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
+			import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+			import { Sky } from 'three/addons/objects/Sky.js';
 
 			let camera, scene, renderer;
 
 			let sky, sun;
 
 			init();
-			render();
 
 			function initSky() {
 
@@ -44,7 +52,10 @@
 					mieDirectionalG: 0.7,
 					elevation: 2,
 					azimuth: 180,
-					exposure: renderer.toneMappingExposure
+					exposure: renderer.toneMappingExposure,
+					cloudCoverage: 0.4,
+					cloudDensity: 0.4,
+					cloudElevation: 0.5
 				};
 
 				function guiChanged() {
@@ -54,6 +65,9 @@
 					uniforms[ 'rayleigh' ].value = effectController.rayleigh;
 					uniforms[ 'mieCoefficient' ].value = effectController.mieCoefficient;
 					uniforms[ 'mieDirectionalG' ].value = effectController.mieDirectionalG;
+					uniforms[ 'cloudCoverage' ].value = effectController.cloudCoverage;
+					uniforms[ 'cloudDensity' ].value = effectController.cloudDensity;
+					uniforms[ 'cloudElevation' ].value = effectController.cloudElevation;
 
 					const phi = THREE.MathUtils.degToRad( 90 - effectController.elevation );
 					const theta = THREE.MathUtils.degToRad( effectController.azimuth );
@@ -63,7 +77,6 @@
 					uniforms[ 'sunPosition' ].value.copy( sun );
 
 					renderer.toneMappingExposure = effectController.exposure;
-					renderer.render( scene, camera );
 
 				}
 
@@ -76,6 +89,11 @@
 				gui.add( effectController, 'elevation', 0, 90, 0.1 ).onChange( guiChanged );
 				gui.add( effectController, 'azimuth', - 180, 180, 0.1 ).onChange( guiChanged );
 				gui.add( effectController, 'exposure', 0, 1, 0.0001 ).onChange( guiChanged );
+
+				const folderClouds = gui.addFolder( 'Clouds' );
+				folderClouds.add( effectController, 'cloudCoverage', 0, 1, 0.01 ).name( 'coverage' ).onChange( guiChanged );
+				folderClouds.add( effectController, 'cloudDensity', 0, 1, 0.01 ).name( 'density' ).onChange( guiChanged );
+				folderClouds.add( effectController, 'cloudElevation', 0, 1, 0.01 ).name( 'elevation' ).onChange( guiChanged );
 
 				guiChanged();
 
@@ -94,13 +112,12 @@
 				renderer = new THREE.WebGLRenderer();
 				renderer.setPixelRatio( window.devicePixelRatio );
 				renderer.setSize( window.innerWidth, window.innerHeight );
-				renderer.outputEncoding = THREE.sRGBEncoding;
+				renderer.setAnimationLoop( animate );
 				renderer.toneMapping = THREE.ACESFilmicToneMapping;
 				renderer.toneMappingExposure = 0.5;
 				document.body.appendChild( renderer.domElement );
 
 				const controls = new OrbitControls( camera, renderer.domElement );
-				controls.addEventListener( 'change', render );
 				//controls.maxPolarAngle = Math.PI / 2;
 				controls.enableZoom = false;
 				controls.enablePan = false;
@@ -118,12 +135,11 @@
 
 				renderer.setSize( window.innerWidth, window.innerHeight );
 
-				render();
-
 			}
 
-			function render() {
+			function animate() {
 
+				sky.material.uniforms[ 'time' ].value = performance.now() * 0.001;
 				renderer.render( scene, camera );
 
 			}
